@@ -1,0 +1,231 @@
+#! /bin/bash
+
+# Primary checks
+export CONFDIR="$1"
+[[ -z "$CONFDIR" ]] && CONFDIR="$HOME/.based"
+[[ ! -d "$CONFDIR" ]] && mkdir -p "$CONFDIR"
+[[ ! -f "$CONFDIR"/config ]] && echo "E: Missing Configuraion File" 1>&2 && exit 255
+[[ ! -f "$CONFDIR"/basepacks ]] && echo "E: Missing Packages File" 1>&2 && exit 255
+[[ ! -f "$CONFDIR"/template.7z ]] && [[ ! -d "$CONFDIR"/basetemplate/ ]] && echo -e "E: Missing basefs template" 1>&2 && exit 255
+
+# Include configuration file
+.  "$CONFDIR"/config
+
+cd "$CONFDIR"
+[[ -d  "$CONFDIR"/basetemplate/ ]] && rm -rf template.7z && 7z -mx=9 a template.7z basetemplate/
+
+# Delete previous work directory, extract the template to it
+rm -rf $workdir && 7z -obase x "$CONFDIR"/template.7z && mv "$CONFDIR"/base/basetemplate $workdir && rm -rf "$CONFDIR"/base/
+
+# Copy configuration file and base packages file to work directory
+cp "$CONFDIR"/config $workdir/tmp/
+cp "$CONFDIR"/basepacks $workdir/tmp/
+
+# Add kernel package and headers package to base packages file
+kpkg="linux-image-$kver"
+hpkg="linux-headers-$kver"
+echo "$kpkg" >> $workdir/tmp/basepacks
+echo "$hpkg" >> $workdir/tmp/basepacks
+
+# Create a temporary work directory for the build process
+tmpdir=${CONFDIR}/tmp/`makepasswd --chars=9`
+
+# Use debootstrap to acquire default packages from the repository
+packs=`debootstrap --print-debs --verbose --keep-debootstrap-dir --components=main,contrib,non-free jessie $tmpdir 2> /dev/null | tr ' ' '\n'`
+
+# Now read the maintainer's required packages
+basepacks=`cat $workdir/tmp/basepacks`
+
+# Diff packs and basepacks to get extra included packages and extra packages to remove
+include=`for i in $basepacks; do echo "$packs" | grep -Eq "^$i$" || echo $i; done | tr '\n' ' '`
+exclude=`for i in $packs; do echo "$basepacks" | grep -Eq "^$i$" || echo $i; done | tr '\n' ' '`
+
+# Use debootsrap to build a small chrooted base system with required packages
+debootstrap --verbose --components=main,contrib,non-free --include="$include" --exclude="$exclude" jessie $tmpdir
+
+# Magical steps to prepare the chrooted base system for our configurations
+echo "librerouter" > $tmpdir/etc/hostname
+chroot $tmpdir sed -i 's/# en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/g' /etc/locale.gen
+chroot $tmpdir locale-gen en_US.UTF-8
+chroot $tmpdir localedef -i en_US -f UTF-8 en_US.UTF-8
+
+# Apply configurations to work directory
+echo "$codename" > $workdir/etc/debian_version
+echo "Vendor: $name" > $workdir/etc/dpkg/origins/default
+echo "Vendor-URL: https://$website/" >> $workdir/etc/dpkg/origins/default
+echo "Bugs: debbugs://$website" >> $workdir/etc/dpkg/origins/default
+cp $workdir/etc/dpkg/origins/default $workdir/etc/dpkg/origins/debian 2> /dev/null
+echo "DITRIB_ID=$name" > $workdir/etc/lsb-release
+echo "DISTRIB_RELEASE=$ver" >> $workdir/etc/lsb-release
+echo "DISTRIB_CODENAME=$codename" >> $workdir/etc/lsb-release
+echo "DISTRIB_DESCRIPTION=\"$name ${ver}${stage}${step} $codename\"" >> $workdir/etc/lsb-release
+sed -i 's/StdBaseFS [0-9]*\.[0-9]*/'$base' '$ver'/g' $workdir/etc/motd
+sed -i 's/Copyright (c) [0-9]*/Copyright (c) '$year'/g' $workdir/etc/motd
+echo "PRETTY_NAME=\"$name $ver $codename\"" > $workdir/etc/os-release
+echo "NAME=\"$name\"" >> $workdir/etc/os-release
+echo "VERSION_ID=\"$ver\"" >> $workdir/etc/os-release
+echo "VERSION=\"$codename ($ver)\"" >> $workdir/etc/os-release
+echo "ID=$name" >> $workdir/etc/os-release
+echo "ANSI_COLOR=\"1;31\"" >> $workdir/etc/os-release
+echo "HOME_URL=\"$website\"" >> $workdir/etc/os-release
+echo "SUPPORT_URL=\"$website\"" >> $workdir/etc/os-release
+echo "BUG_REPORT_URL=\"$bugmail\"" >> $workdir/etc/os-release
+sed -i -e 's/LIVECDLABEL="[0-9,a-z,A-Z, ,_,.]*"/LIVECDLABEL="'$base' '$ver'"/g' $workdir/etc/remastersys.conf
+sed -i -e 's/CUSTOMISO="[a-z,A-Z,0-9, ,-,_,.]*"/CUSTOMISO="'${base}_${ver}${stage}${step}_${arch}.iso'"/g' $workdir/etc/remastersys.conf
+echo "$ver" > $workdir/etc/sphinux-info
+echo "$repo" >> $workdir/etc/remastersys/install/sources.list
+echo "$sourcerepo" >> $workdir/etc/remastersys/install/sources.list
+sed -i -e 's/stdbasever:[[:print:]]*/stdbasever: '${ver}${stage}${step}';/g' $workdir/etc/remastersys/install/horus.conf
+sed -i -e 's/reqspace:[[:print:]]*/reqspace: '${size}';/g' $workdir/etc/remastersys/install/horus.conf
+sed -i -e 's/distribname:[[:print:]]*/distribname: '${name}';/g' $workdir/etc/remastersys/install/horus.conf
+sed -i -e 's/distribver:[[:print:]]*/distribver: '${ver}${stage}${step}';/g' $workdir/etc/remastersys/install/horus.conf
+sed -i -e 's/distribcodename:[[:print:]]*/distribcodename: '${codename}';/g' $workdir/etc/remastersys/install/horus.conf
+sed -i -e 's/distriburl:[[:print:]]*/distriburl: '${website}';/g' $workdir/etc/remastersys/install/horus.conf
+sed -i -e 's/distribsupporturl:[[:print:]]*/distribsupporturl: '${website}';/g' $workdir/etc/remastersys/install/horus.conf
+sed -i -e 's/bugmail:[[:print:]]*/bugmail: '${bugmail}';/g' $workdir/etc/remastersys/install/horus.conf
+sed -i -e 's/stdver="[0-9,.]*"/stdver="'${ver}'"/g' $workdir/usr/share/horus/scripts/horus-backend
+sed -i -e 's/stdver="[0-9,.]*"/stdver="'${ver}'"/g' $workdir/usr/sbin/horus-backend
+echo `date +%s` > $workdir/etc/buildid
+
+# Now copy the workdirectory to the temporary build directory
+cp -Rf $workdir/* $tmpdir/
+
+# Fix start-stop-daemon bug
+mv $tmpdir/sbin/start-stop-daemon.REAL $tmpdir/sbin/start-stop-daemon
+
+# Fix any broken packages
+chroot $tmpdir dpkg --configure -a
+chroot $tmpdir apt-get install -qy --reinstall -f
+
+# Install extra packages included in the /tmp dir of the base template
+for i in $tmpdir/tmp/*.deb; do pack=`basename $i`; chroot $tmpdir dpkg -i /tmp/$pack; done
+
+# Generate the initramfs with the non-free extra kernel blobs in order to use it to boot the live syste
+# Honestly, I didn't prefer including any non-free binary blobs, but seriously, ATI machines failed to boot the live system
+# The users asked for this :(
+chroot $tmpdir update-initramfs -utk $kver
+cp $tmpdir/boot/initrd.img-${kver} $tmpdir/tmp/initrd.img
+
+# Generate a clean initramfs ...
+chroot $tmpdir update-initramfs -utk $kver
+
+# Extra packages required for horus remote installer via SSH
+# Downloaded but never installed, packages needed by the installer for the remote installation
+# to function properly
+echo "$repo" > $tmpdir/etc/apt/sources.list.d/o2pax.list
+mount -o bind /dev/ $tmpdir/dev/
+mount -o bind /dev/pts $tmpdir/dev/pts
+mount -o bind /proc/ $tmpdir/proc/
+mount -o bind /sys/ $tmpdir/sys/
+cp /etc/resolv.conf $tmpdir/etc/resolv.conf
+chroot $tmpdir apt-get -yq --force-yes install -f
+chroot $tmpdir apt-get update
+chroot $tmpdir wget https://pkg.bunsenlabs.org/debian/pool/main/y/yad/yad_0.37.0-1_i386.deb
+chroot $tmpdir dpkg -i yad_0.37.0-1_i386.deb
+chroot $tmpdir apt-get -yq --force-yes install -f
+packsurls=`chroot $tmpdir apt-get install -yq --print-uris --reinstall openssh-server --no-install-recommends | grep "^'" | awk '{print $1}' | tr -d "'" | sed 's/ftp:/http:/g'`
+wget $packsurls -P $tmpdir/var/cache/horus/archives/
+
+cat << EOF >  $tmpdir/etc/apt/sources.list
+deb http://ftp.debian.org/debian jessie main contrib non-free
+deb http://ftp.debian.org/debian jessie-updates main contrib non-free
+deb http://security.debian.org jessie/updates main contrib non-free
+deb http://ftp.debian.org/debian jessie-backports main contrib non-free
+deb-src http://ftp.debian.org/debian jessie main contrib non-free
+deb-src http://ftp.debian.org/debian jessie-updates main contrib non-free
+deb-src http://security.debian.org jessie/updates main contrib non-free
+deb-src http://ftp.debian.org/debian jessie-backports main contrib non-free
+EOF
+
+echo 'deb http://download.opensuse.org/repositories/isv:/ownCloud:/community/Debian_8.0/ /' > $tmpdir/etc/apt/sources.list.d/owncloud.list
+echo 'deb https://dl.dropboxusercontent.com/u/18621288/debian wheezy main' > $tmpdir/etc/apt/sources.list.d/tahoei2p.list
+echo 'deb http://debian.yacy.net ./' > $tmpdir/etc/apt/sources.list.d/yacy.list
+echo 'deb http://deb.i2p2.no/ stable main' > $tmpdir/etc/apt/sources.list.d/i2p.list
+echo 'deb http://deb.torproject.org/torproject.org jessie main' > $tmpdir/etc/apt/sources.list.d/tor.list
+echo 'deb http://download.webmin.com/download/repository sarge contrib' > $tmpdir/etc/apt/sources.list.d/webmin.list
+chroot $tmpdir wget http://download.opensuse.org/repositories/isv:/ownCloud:/community/Debian_8.0/Release.key -O- | chroot $tmpdir apt-key add -
+chroot $tmpdir apt-key advanced --keyserver pgp.net.nz --recv-keys 03D886E7
+chroot $tmpdir wget --no-check-certificate https://geti2p.net/_static/i2p-debian-repo.key.asc -O- | chroot $tmpdir apt-key add -
+chroot $tmpdir gpg --keyserver pgp.net.nz --recv 886DDD89
+chroot $tmpdir gpg --export A3C4F0F979CAA22CDBA8F512EE8CBC9E886DDD89 | chroot $tmpdir apt-key add -
+chroot $tmpdir wget http://www.webmin.com/jcameron-key.asc
+chroot $tmpdir apt-key add jcameron-key.asc
+chroot $tmpdir rm -f jcameron-key.asc
+
+echo "
+Acquire::https::dl.dropboxusercontent.com::Verify-Peer \"false\";
+Acquire::https::deb.nodesource.com::Verify-Peer \"false\";
+        " > $tmpdir/etc/apt/apt.conf.d/apt.conf
+
+chroot $tmpdir apt-get update
+
+chroot $tmpdir bash -c 'DEBIAN_FRONTEND=noninteractive; apt-get install -y --force-yes \
+php5-common php5-fpm php5-cli php5-json php5-mysql \
+php5-curl php5-intl php5-mcrypt php5-memcache \
+php-xml-parser php-pear phpmyadmin php5 mailutils \
+openjdk-7-jre-headless uwsgi \
+php5-gd php5-imap smarty3 git ntpdate macchanger \
+bridge-utils hostapd hostapd bridge-utils librrd-dev \
+curl macchanger ntpdate bc sudo lsb-release dnsutils \
+ca-certificates-java openssh-server ssh wireless-tools usbutils \
+unzip debian-keyring subversion build-essential libncurses5-dev \
+i2p-keyring virtualenv pwgen gcc g++ make automake \
+killyourtv-keyring i2p-tahoe-lafs libcurl4-gnutls-dev \
+libicapapi-dev libssl-dev perl screen aptitude \
+deb.torproject.org-keyring u-boot-tools php-zeta-console-tools \
+gnupg openssl python-virtualenv python-pip python-lxml git \
+libjpeg62-turbo libjpeg62-turbo-dev zlib1g-dev python-dev \
+libxml2-dev libxslt1-dev python-jinja2 python-pgpdump spambayes \
+flex bison libpcap-dev libnet1-dev libpcre3-dev iptables-dev \
+libnetfilter-queue-dev libdumbnet-dev autoconf rails \
+roundcube-mysql roundcube-plugins ntop libndpi-bin \
+argus-server argus-client libnids-dev flow-tools libfixbuf3 \
+libgd-perl libgd-graph-perl rrdtool librrd-dev librrds-perl \
+libsqlite3-dev libtool elasticsearch conky ruby bundler \
+pmacct tomcat7 dpkg-dev devscripts javahelper openjdk-7-jdk ant \
+librrds-perl libapache2-mod-php5- apache2-prefork-dev \
+libmysqlclient-dev wkhtmltopdf libpcre3 mysql-server mysql-client-5.5'
+
+chroot $tmpdir bash -c 'DEBIAN_FRONTEND=noninteractive; apt-get install -y --force-yes \
+privoxy unbound owncloud isc-dhcp-server \
+yacy c-icap clamav clamav-daemon webmin squidguard postfix \
+tor i2p roundcube tinyproxy prosody'
+
+# Clean unwanted kaka and m3eez (Kaka = shit / m3eez = goats) :D
+umount $tmpdir/proc/
+umount $tmpdir/sys/
+umount $tmpdir/dev/pts
+umount $tmpdir/dev/
+rm -f $tmpdir/var/cache/apt/*.bin
+rm -rf $tmpdir/var/cache/apt/archives/
+rm -f $tmpdir/var/lib/dpkg/*-old
+rm -rf $tmpdir/var/lib/apt/lists/*
+rm -f $tmpdir/var/cache/debconf/*-old
+rm -rf $tmpdir/var/log/*
+rm -f $tmpdir/etc/resolv.conf
+
+# Add isohybrid binary to prepare the generated iso for booting
+cp $(/usr/bin/whereis isohybrid | awk -F ' ' '{print $2}') $tmpdir/tmp/isohybrid
+
+# Finally, the build script should take it from here ...
+chroot $tmpdir /tmp/build
+
+# Create temporary uncompressed outdir
+mkdir $tmpdir/tmp/${base}_${ver}${stage}${step}_${arch}
+echo "$(cat $tmpdir/etc/motd;echo -e "\nABOUT:\n\tStdBaseFS <Standard Base File System>\n\tScalable general purpose standalone Operating System\n\t\Standadized to ensure compatibility, balanced performance, stability and extensibility ...\n\nINCLUDED SOFTWARE:\n\nName\t\t\t   Version";echo "`chroot $tmpdir dpkg -l`" | grep ^ii | sed 's/:'${arch}'//g' | awk '{print $2"\t\t\t\t\t\t\t"$3}' | column -t;echo -e "\n\nBUGS:\n\tReport bugs to:\t<$mail>\n\t\t\t<$bugmail>\n\n\nVERSION:\n\t${ver}${stage}${step}\n\n\nDATE:\n\t`date`")" > $tmpdir/tmp/${base}_${ver}${stage}${step}_${arch}/README
+
+# Move the isofs and the md5 files to the outdir
+mv $tmpdir/home/build/remastersys/*.iso* $tmpdir/tmp/${base}_${ver}${stage}${step}_${arch}/
+
+# Compress temporary outdir and move it to specified outdir
+7z -mx=0 a $tmpdir/tmp/${base}_${ver}${stage}${step}_${arch}.7z $tmpdir/tmp/${base}_${ver}${stage}${step}_${arch}/
+rm -f $outdir/${base}_${ver}${stage}${step}_${arch}.7z
+mv $tmpdir/tmp/${base}_${ver}${stage}${step}_${arch}.7z $outdir
+cd $outdir
+
+# Delete workdir and tmpdir
+rm -rf $workdir
+rm -rf $tmpdir
+
+echo "[OBA_ROBOT/Basefs_Daemon - `date`]: StdBaseFS version (${ver}${stage}${step}) architecture (${arch}) built successfully" >> /var/log/main.log
+

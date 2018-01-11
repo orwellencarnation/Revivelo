@@ -1,0 +1,346 @@
+Name      	RAM	      HDD     	CPU     	GUI   	Implemented	Notes  Log.files.path    Configuration.Files
+
+apt-transport-https   # Required by installation script for apt to contact ssl enabled repos.
+bridge-utils          # Required for creating/configuring bridged connection
+ntp                   # Listed at installation script ( do we need to run a local instance of ntp? )
+lighttpd              # Required to run the Web UI files "GUI.md" - Missing: cgi handler for cgi-bin scripts
+acpi                  # Required (base packages - acpi command to get battery life - not sure if needed for Pipo X8) 
+acpid                 # Required (base packages - acpi deamon for power management events)
+acpi-support-base     # Required (base packages - acpi-base)
+acpitool              # Required (base packages - acpi)
+adduser               # Required (base packages - critical)
+and                   # Not requred - TODO: remove
+apt                   # Required (base packages - critical)
+at                    # Not requred - TODO: remove
+attr                  # Not requred - TODO: remove
+aufs-tools            # Required (base packages - live systems require AUFS enabled kernel with aufs-tools)
+base-files            # Required (base packages - critical)
+base-passwd           # Required (base packages - critical)
+bash                  # Required (base packages - critical)
+bash-completion       # Good to have
+bc                    # Required by installer env. and many other scripts
+beep                  # Not requred - TODO: remove
+bidiv                 # Not requred - TODO: remove
+binfmt-support
+binutils
+bsdmainutils
+bsdutils
+busybox
+bzip2
+ca-certificates
+console-common
+console-data
+console-setup
+console-setup-linux
+coreutils
+cpio
+cpp
+cpp-4.9
+cpufrequtils
+cpuid
+cron
+dash
+debconf
+debconf-utils
+debian-archive-keyring
+debianutils
+dialog
+diffutils
+dkms
+dmidecode
+dmsetup
+dpkg
+dvd+rw-tools
+e2fslibs
+e2fsprogs
+ed
+eject
+ethtool
+expect
+extlinux
+fakeroot
+file
+findutils
+finger
+firmware-linux-free
+firmware-linux-nonfree
+ftp
+fuse
+gawk
+gcc
+gcc-4.9
+gcc-4.9-base
+genisoimage
+gettext-base
+git
+gnupg
+gpgv
+grep
+groff-base
+growisofs
+grub2
+grub2-common
+grub-common
+grub-pc
+grub-pc-bin
+gzip
+hddtemp
+hdparm
+hostname
+htop
+hwinfo
+ifplugd
+ifupdown
+inetutils-telnet
+initramfs-tools
+initscripts
+init-system-helpers
+inputattach
+input-utils
+insserv
+install-info
+iproute
+iproute2
+iptables
+iputils-ping
+ipwatchd
+isc-dhcp-client
+isc-dhcp-common
+iw
+kacpimon
+kbd
+keyboard-configuration
+keyutils
+klibc-utils
+kmod
+less
+linux-base
+live-boot
+live-boot-initramfs-tools
+live-config
+live-config-sysvinit
+live-tools
+locales
+login
+logrotate
+lsb-base
+lsb-release
+lshw
+lsof
+lzma
+m4
+make
+makedev
+man-db
+manpages
+mime-support
+mlocate
+module-init-tools
+mount
+mtools
+multiarch-support
+nano
+nbtscan
+ncurses-base
+ncurses-bin
+ncurses-term
+netbase
+netcat-traditional
+net-tools
+ntpdate
+openssh-client
+openssl
+os-prober
+parted
+passwd
+patch
+pax
+pbzip2
+pciutils
+perl
+perl-base
+perl-modules
+pm-utils
+powermgmt-base
+powertop
+ppp
+pptp-linux
+procps
+psmisc
+python
+python2.7
+python2.7-minimal
+python-minimal
+readline-common
+rfkill
+rsync
+rsyslog
+sed
+sensible-utils
+squashfs-tools
+startpar
+sudo
+syslinux
+syslinux-common
+sysvinit
+sysvinit-core
+sysvinit-utils
+sysv-rc
+tar
+tcl8.5
+time
+traceroute
+tzdata
+ucf
+udftools
+unrar-free
+unzip
+usb-modeswitch
+usb-modeswitch-data
+usbutils
+user-setup
+uswsusp
+util-linux
+uuid-runtime
+vbetool
+wdiff
+wget
+whois
+wireless-tools
+wodim
+wpasupplicant
+wvdial
+xkb-data
+xorriso
+xz-utils
+zip
+zlib1g
+amd64-microcode
+apt-utils
+curl
+dnsutils
+firmware-atheros
+firmware-iwlwifi
+firmware-linux
+firmware-linux-nonfree
+firmware-realtek
+inetutils-telnet
+insserv
+intel-microcode
+iputils-ping
+iputils-tracepath
+lm-sensors
+mawk
+original-awk
+p7zip-full
+realpath
+rkhunter
+traceroute
+unhide
+unrar
+wmctrl
+x11-xserver-utils
+xinit
+xscreensaver
+xscreensaver-data
+xscreensaver-data-extra
+xscreensaver-gl
+xscreensaver-gl-extra
+xserver-xorg-input-all
+gparted
+xserver-xorg
+xserver-xorg-core
+xserver-xorg-input-acecad
+xserver-xorg-input-aiptek
+xserver-xorg-input-elographics
+xserver-xorg-input-evdev
+xserver-xorg-input-joystick
+xserver-xorg-input-kbd
+xserver-xorg-input-mouse
+xserver-xorg-input-multitouch
+xserver-xorg-input-mutouch
+xserver-xorg-input-synaptics
+xserver-xorg-input-vmmouse
+xserver-xorg-input-void
+xserver-xorg-input-wacom
+xserver-xorg-video-all
+xserver-xorg-video-ati
+xserver-xorg-video-cirrus
+xserver-xorg-video-dummy
+xserver-xorg-video-fbdev
+xserver-xorg-video-glamo
+xserver-xorg-video-glide
+xserver-xorg-video-intel
+xserver-xorg-video-mach64
+xserver-xorg-video-mga
+xserver-xorg-video-neomagic
+xserver-xorg-video-nouveau
+xserver-xorg-video-openchrome
+xserver-xorg-video-r128
+xserver-xorg-video-radeon
+xserver-xorg-video-savage
+xserver-xorg-video-siliconmotion
+xserver-xorg-video-sisusb
+xserver-xorg-video-tdfx
+xserver-xorg-video-trident
+xserver-xorg-video-vesa
+xserver-xorg-video-vmware
+xdotool
+xterm
+makepasswd
+shc
+numlockx
+x11-xkb-utils
+firmware-intelwimax
+wget
+
+
+
+Jikes	-	-	-	-	No	old, last update 6 years ago Why is required?
+Xplico	-	30MB	-	+(included)	No	
+Vortex-IDS	67MB	3MB	-	+(kibanan)	No	
+Bro-IDS		1GB		+(brownian)	No	
+PmGraph	512MB	25MB	700MHZ	+(included)	No	
+Openssh-server		800KB			Yes	
+modsecurity		80MB			Yes	
+nginx		256KB			Yes	
+mailpile	512MB	33MB			Yes	
+easyrtc					Yes	
+hublin					Yes	
+owncloud					Yes	
+libecap					Yes	
+Fg-ecap					Yes	
+squid					Yes	
+squidclamav				+(squidguardmgr)	Yes	
+ecapguardian					Yes	
+suricata					Yes	
+kibana					Yes	
+scirius					No	
+snort					No	
+barnyard					No	
+openwips_ng					No	
+hakabana					No	
+flowviewer					No	
+nfsen					No	
+evebox					Yes	
+selks					No	
+snorby					No	
+glype					Yes	
+gitlab					Yes	
+trac					Yes	
+redmine					Yes	
+ndpi					Yes	
+redsocks					Yes	
+ntopng					Yes	
+tor					Yes	
+i2p					Yes	
+privoxy					Yes	
+unbound					Yes	
+Isc-dhcp-server					Yes	
+yacy					Yes	
+squidguard					Yes	
+postfix					Yes	
+roundcube					Yes	
+tinyproxy					Yes	
+prosody					Yes	
+Mysql-server					Yes	

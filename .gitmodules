@@ -1,0 +1,3 @@
+[submodule "banks/sublist3r"]
+	path=banks/sublist3r
+	url=https://github.com/manizzle/Sublist3r
